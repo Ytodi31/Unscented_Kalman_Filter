@@ -90,11 +90,7 @@ UKF::UKF() {
 
    Xsig_aug = MatrixXD(n_aug_, 2*n_aug_ + 1);
 
-   VectorXd r(3);
-   r << pow(std_radr_,2),
-     pow(std_radphi_,2),
-     pow(std_radrd_,2);
-    MatrixXd R = r.asDiagonal();
+
 }
 
 UKF::~UKF() {}
@@ -197,16 +193,58 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
    * covariance, P_.
    * You can also calculate the lidar NIS, if desired.
    */
+   int n_z = 2;
+   VectorXd z(2);
+
+   // Defining vector for incoming LiDAR measurement
+   z << meas_package.raw_measurements_[0],
+        meas_package.raw_measurements_[1];
+
+  VectorXD z_pred = VectorXd(n_z);
+
+  // Calculating state for predicted measurement
+  for (int i = 0; i < 2*n_aug+1; i++) {
+     VectorXd state = Xsig_pred_.col(i);
+     Zsig.col(i) << state[0],
+                    state[1];
+     z_pred += weights[i]*Zsig.col(i);
+    }
+
+    // Creating measurement noise matrix
+    VectorXd r(2);
+    r << pow(std_laspx_2),
+         pow(std_laspy_,2);
+     MatrixXd R = r.asDiagonal();
+
+    // Calculating Covaince matrix for predicted measurement
+    MatrixXd S = MatrixXd(n_z,n_z);
+    for (int i = 0; i < 2*n_aug+1; i++) {
+      VectorXd zdiff = Zsig.col(i) - z_pred;
+      S += weights[i]*zdiff*zdiff.transpose();
+    }
+    S = S + R;
+
+    // Defining the cross-correlation matrix
+    MatrixXd Tc = MatrixXd(n_x_, n_z);
+
+  // Calculating the cross-correlation matrix
+  for(int i = 0; i<2*n_aug+1; i++) {
+    VectorXd zdiff = Zsig.col(i) - z_pred;
+    VectorXd xdiff = Xsig_pred_.col(i) - x_;
+    Tc += weights(i)*xdiff*zdiff.transpose();
+    }
+
+    // Calculating the Kalman Gain
+    MatrixXd K = Tc*S.inverse();
+
+    // Updating state and covaraince
+    x_ += K*(z - z_pred);
+    P_ +=  - K*S*K.transpose();
+
 
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
-  /**
-   * TODO: Complete this function! Use radar data to update the belief
-   * about the object's position. Modify the state vector, x_, and
-   * covariance, P_.
-   * You can also calculate the radar NIS, if desired.
-   */
    int n_z = 3;
    MatrixXD Zsig = MatrixXD(n_z, 2*n_aug_+1);
 
@@ -216,6 +254,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
        meas_package.raw_measurements_[1],
        meas_package.raw_measurements_[2];
 
+  VectorXD z_pred = VectorXd(n_z);
      // Calculating state for predicted measurement
    for (int i = 0; i < 2*n_aug+1; i++) {
       VectorXd state = Xsig_pred_.col(i);
@@ -234,6 +273,14 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
       VectorXd zdiff = Zsig.col(i) - z_pred;
       S += weights[i]*zdiff*zdiff.transpose();
     }
+
+    // Creating measurement noise matrix
+    VectorXd r(3);
+    r << pow(std_radr_,2),
+      pow(std_radphi_,2),
+      pow(std_radrd_,2);
+     MatrixXd R = r.asDiagonal();
+
     S = S + R;
 
     // Defining the cross-correlation matrix
