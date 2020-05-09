@@ -90,6 +90,7 @@ UKF::UKF() {
 
    Xsig_aug = MatrixXD(n_aug_, 2*n_aug_ + 1);
 
+   is_initialized_ = false;
 
 }
 
@@ -100,24 +101,39 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
    * TODO: Complete this function! Make sure you switch between lidar and radar
    * measurements.
    */
-   if(meas_package.sensor_type_ == MeasurementPackage::LASER) {
-     x_ << meas_package.raw_measurements_[0],
-           meas_package.raw_measurements_[1],
-           0,
-           0
-           0;
-   } else {
-     double rho = meas_package.raw_measurements_[0];
-     double phi = meas_package.raw_measurements_[1];
-     double phi_dot = meas_package.raw_measurements_[2];
+   if(!is_initialized_) {
+     if(meas_package.sensor_type_ == MeasurementPackage::LASER) {
+       x_ << meas_package.raw_measurements_[0],
+             meas_package.raw_measurements_[1],
+             0,
+             0
+             0;
+     } else {
+       double rho = meas_package.raw_measurements_[0];
+       double phi = meas_package.raw_measurements_[1];
+       double phi_dot = meas_package.raw_measurements_[2];
 
-     //Polar to Cartesian coordinates
-     x << rho*cos(phi),
-          rho*sin(phi),
-          0,
-          0,
-          0;
+       //Polar to Cartesian coordinates
+       x << rho*cos(phi),
+            rho*sin(phi),
+            0,
+            0,
+            0;
+     }
+     std::cout << "Initialized Unscented Kalman Filter" << std::endl;
+     is_initialized_ = true;
+     previous_timestamp = meas_package.timestamp_;
    }
+
+   double delta_t = (meas_package.timestamp_ - start_time)*1.0e-6;
+
+   Prediction(delta_t);
+
+   if(meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_==true)
+    UpdateLidar(meas_package);
+   else if (use_radar_==true)
+     UpdateRadar(meas_package);
+    previous_timestamp = meas_package.time_stamp_;
 }
 
 void UKF::Prediction(double delta_t) {
