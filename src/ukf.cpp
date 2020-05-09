@@ -89,6 +89,12 @@ UKF::UKF() {
    weights_[0]  = lambda_/(lambda_ + n_aug_);
 
    Xsig_aug = MatrixXD(n_aug_, 2*n_aug_ + 1);
+
+   VectorXd r(3);
+   r << pow(std_radr_,2),
+     pow(std_radphi_,2),
+     pow(std_radrd_,2);
+    MatrixXd R = r.asDiagonal();
 }
 
 UKF::~UKF() {}
@@ -109,6 +115,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
      double phi = meas_package.raw_measurements_[1];
      double phi_dot = meas_package.raw_measurements_[2];
 
+     //Polar to Cartesian coordinates
      x << rho*cos(phi),
           rho*sin(phi),
           0,
@@ -127,6 +134,7 @@ void UKF::Prediction(double delta_t) {
    x_aug << x,
             0,
             0;
+
   // Calculating square root of matrix using Cholesky decomposition
    P_aug= P_aug.llt().matrixL();
 
@@ -137,6 +145,7 @@ void UKF::Prediction(double delta_t) {
      Xsig_aug.col(i+ n_aug_) = x_aug - sqrt(lambda_ + n_aug_)*P_aug.col(i-1);
    }
 
+  // Process Model
    for(int i = 0; i < 2*n_aug_; i++) {
      VectorXd state = Xsig_aug.col(i);
      double px = state[0];
@@ -188,6 +197,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
    * covariance, P_.
    * You can also calculate the lidar NIS, if desired.
    */
+
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
@@ -197,4 +207,24 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
    * covariance, P_.
    * You can also calculate the radar NIS, if desired.
    */
+   int n_z = 3;
+   MatrixXD Zsig = MatrixXD(n_z, 2*n_aug_+1);
+   for (int i = 0; i < 2*n_aug+1; i++) {
+      VectorXd state = Xsig_pred_.col(i);
+      double rho = sqrt(pow(state[0],2)+pow(state[1],2));
+      double phi = atan(state[1]/state[0]);
+      double rho_dot = (state[0]*state[2]*cos(state[3]) + state[1]*state[2]*sin(state[3]))/rho;
+      Zsig.col(i) << rho,
+                     phi,
+                     rho_dot;
+      z_pred += weights[i]*Zsig.col(i);
+    }
+
+    MatrixXd S = MatrixXd(n_z,n_z);
+    for (int i = 0; i < 2*n_aug+1; i++) {
+      VectorXd zdiff = Zsig.col(i) - z_pred;
+      S += weights[i]*zdiff*zdiff.transpose();
+    }
+    S = S + R;
+    
 }
