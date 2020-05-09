@@ -209,6 +209,14 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
    */
    int n_z = 3;
    MatrixXD Zsig = MatrixXD(n_z, 2*n_aug_+1);
+
+   // Defining vector for incoming RADAR measurement
+   VectorXd z(3);
+   z << meas_package.raw_measurements_[0],
+       meas_package.raw_measurements_[1],
+       meas_package.raw_measurements_[2];
+
+     // Calculating state for predicted measurement
    for (int i = 0; i < 2*n_aug+1; i++) {
       VectorXd state = Xsig_pred_.col(i);
       double rho = sqrt(pow(state[0],2)+pow(state[1],2));
@@ -220,11 +228,28 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
       z_pred += weights[i]*Zsig.col(i);
     }
 
+    // Calculating Covaince matrix for predicted measurement
     MatrixXd S = MatrixXd(n_z,n_z);
-    for (int i = 0; i < 2*n_aug+1; i++) {
+  for (int i = 0; i < 2*n_aug+1; i++) {
       VectorXd zdiff = Zsig.col(i) - z_pred;
       S += weights[i]*zdiff*zdiff.transpose();
     }
     S = S + R;
-    
+
+    // Defining the cross-correlation matrix
+    MatrixXd Tc = MatrixXd(n_x_, n_z);
+
+  // Calculating the cross-correlation matrix
+  for(int i = 0; i<2*n_aug+1; i++) {
+    VectorXd zdiff = Zsig.col(i) - z_pred;
+    VectorXd xdiff = Xsig_pred_.col(i) - x_;
+    Tc += weights(i)*xdiff*zdiff.transpose();
+    }
+
+    // Calculating the Kalman Gain
+    MatrixXd K = Tc*S.inverse();
+
+    // Updating state and covaraince
+    x_ += K*(z - z_pred);
+    P_ +=  - K*S*K.transpose();
 }
