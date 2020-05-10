@@ -103,7 +103,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
              0,
              0,
              0;
-     } else if (meas_package.sensor_type_ == MeasurementPackage::RADAR){
+     } else {
        double rho = meas_package.raw_measurements_[0];
        double phi = meas_package.raw_measurements_[1];
        double phi_dot = meas_package.raw_measurements_[2];
@@ -126,7 +126,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
    std::cout << "Predict: " << x_ << std::endl;
    if(meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_==true)
     UpdateLidar(meas_package);
-   else if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_==true)
+   else if (use_radar_==true)
      UpdateRadar(meas_package);
     previous_timestamp = meas_package.timestamp_;
     std::cout << "Update: " << x_ << std::endl;
