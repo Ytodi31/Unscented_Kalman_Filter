@@ -41,6 +41,9 @@ class UKF {
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
+  void NormalizeAngle(Eigen::VectorXd vector, int);
+
+  long long prev_time_us;
 
   // initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
