@@ -41,11 +41,22 @@ class UKF {
    */
   void UpdateRadar(MeasurementPackage meas_package);
 
+  /**
+   * Nomralized angle such that value is between -pi to pt
+   * @param1 vector containing angle
+   * @paaram2 position/ index of the angle in the vector
+   */
   void NormalizeAngle(Eigen::VectorXd vector, int);
 
+  /**
+   * Update state from LiDAR and RADAR using Kalman gain
+   * @param1 vector containing angle
+   * @param2 measurement noise matrix
+   * @param3 Predicted measurement using sigma points
+   * @param4 Mean of the estimated state
+   * @param5 Incoming measurement from LiDAR/RADAR
+   */
   void UpdateState(int n_z, Eigen::MatrixXd R, Eigen::MatrixXd Zsig, Eigen::MatrixXd z_pred, Eigen::MatrixXd z);
-
-  long long prev_time_us;
 
   // initially set to false, set to true in first call of ProcessMeasurement
   bool is_initialized_;
