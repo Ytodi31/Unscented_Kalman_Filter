@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-<img src="/data/output.gif" width="600" height="200" />
+<img src="/data/output.gif" width="650" height="250" />
 </p>
 
 ## Overview
