@@ -43,6 +43,8 @@ class UKF {
 
   void NormalizeAngle(Eigen::VectorXd vector, int);
 
+  void UpdateState(int n_z, Eigen::MatrixXd R, Eigen::MatrixXd Zsig, Eigen::MatrixXd z_pred, Eigen::MatrixXd z);
+
   long long prev_time_us;
 
   // initially set to false, set to true in first call of ProcessMeasurement

@@ -239,35 +239,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
          pow(std_laspy_,2);
      MatrixXd R = r.asDiagonal();
 
-    // Calculating Covaince matrix for predicted measurement
-    MatrixXd S = MatrixXd(n_z,n_z);
-    S.fill(0);
-    for (int i = 0; i < 2*n_aug_+1; i++) {
-      VectorXd zdiff = Zsig.col(i) - z_pred;
-      S += weights_[i]*zdiff*zdiff.transpose();
-    }
-    S = S + R;
-
-    // Defining the cross-correlation matrix
-    MatrixXd Tc = MatrixXd(n_x_, n_z);
-    Tc.fill(0);
-    // Calculating the cross-correlation matrix
-    for(int i = 0; i<2*n_aug_+1; i++) {
-      VectorXd zdiff = Zsig.col(i) - z_pred;
-      NormalizeAngle(zdiff, 1);
-      VectorXd xdiff = Xsig_pred_.col(i) - x_;
-      NormalizeAngle(xdiff, 3);
-      Tc += weights_(i)*xdiff*zdiff.transpose();
-      }
-
-      // Calculating the Kalman Gain
-      MatrixXd K = Tc*S.inverse();
-
-      VectorXd z_diffM = (z - z_pred);
-
-      // Updating state and covaraince
-      x_ += K*z_diffM;
-      P_ = P_ - K*S*K.transpose();
+ UpdateState(n_z,R,Zsig,z_pred, z);
 }
 
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
@@ -294,16 +266,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
     NormalizeAngle(z_pred, 1);
 
-    // Calculating Covaince matrix for predicted measurement
-    MatrixXd S = MatrixXd(n_z,n_z);
-    S.fill(0);
-    for (int i = 0; i < 2*n_aug_+1; i++) {
-      VectorXd zdiff = Zsig.col(i) - z_pred;
-      while (zdiff(1) > M_PI) zdiff(1) -= 2.0*M_PI;
-      while (zdiff(1) < -M_PI) zdiff(1) += 2.0*M_PI;
-      S += weights_(i)*zdiff*zdiff.transpose();
-    }
-
     // Creating measurement noise matrix
     VectorXd r = VectorXd(3);
     r <<   pow(std_radr_,2),
@@ -311,19 +273,28 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
           pow(std_radrd_,2);
      MatrixXd R = r.asDiagonal();
 
-    S = S + R;
+     UpdateState(n_z,R,Zsig,z_pred, z);
+}
 
-    // Defining the cross-correlation matrix
-    MatrixXd Tc = MatrixXd(n_x_, n_z);
-    Tc.fill(0);
-  // Calculating the cross-correlation matrix
-  for(int i = 0; i < 2*n_aug_+1; i++) {
+void UKF::UpdateState(int n_z, MatrixXd R, MatrixXd Zsig, MatrixXd z_pred, MatrixXd z) {
+  // Calculating Covaince matrix for predicted measurement
+  MatrixXd S = MatrixXd(n_z,n_z);
+  S.fill(0);
+  for (int i = 0; i < 2*n_aug_+1; i++) {
     VectorXd zdiff = Zsig.col(i) - z_pred;
-    while (zdiff(1) > M_PI) zdiff(1) -= 2.0*M_PI;
-    while (zdiff(1) < -M_PI) zdiff(1) += 2.0*M_PI;
+    S += weights_[i]*zdiff*zdiff.transpose();
+  }
+  S = S + R;
+
+  // Defining the cross-correlation matrix
+  MatrixXd Tc = MatrixXd(n_x_, n_z);
+  Tc.fill(0);
+  // Calculating the cross-correlation matrix
+  for(int i = 0; i<2*n_aug_+1; i++) {
+    VectorXd zdiff = Zsig.col(i) - z_pred;
+    NormalizeAngle(zdiff, 1);
     VectorXd xdiff = Xsig_pred_.col(i) - x_;
-    while (xdiff(3) > M_PI) xdiff(3) -= 2.0*M_PI;
-    while (xdiff(3) < -M_PI) xdiff(3) += 2.0*M_PI;
+    NormalizeAngle(xdiff, 3);
     Tc += weights_(i)*xdiff*zdiff.transpose();
     }
 
@@ -331,12 +302,11 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     MatrixXd K = Tc*S.inverse();
 
     VectorXd z_diffM = (z - z_pred);
-    NormalizeAngle(z_diffM, 1);
+
     // Updating state and covaraince
     x_ += K*z_diffM;
-    P_ =  P_ - K*S*K.transpose();
+    P_ = P_ - K*S*K.transpose();
 }
-
 void UKF::NormalizeAngle(VectorXd vector, int pos) {
     while (vector(pos)> M_PI) vector(pos)-=2.*M_PI;
     while (vector(pos)<-M_PI) vector(pos)+=2.*M_PI;
